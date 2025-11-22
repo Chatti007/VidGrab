@@ -45,8 +45,7 @@ def get_info():
         'no_warnings': True, 
         'nocheckcertificate': True,
         'http_headers': STANDARD_HEADERS,
-        'geo_bypass': True,  # ✨ التعديل الأول: لتجاوز القيود الجغرافية
-        'force_ipv4': True,  # ✨ التعديل الثاني: لإجبار الاتصال على IPv4 (يساعد في بعض مشاكل الاتصال)
+        # تم حذف خيارات geo_bypass و force_ipv4 ليعتمد على yt-dlp.conf
     }
     
     try:
@@ -75,9 +74,8 @@ def get_info():
                 'formats': formats_list[:15]
             })
     except Exception as e:
-        # إرجاع خطأ أو رسالة عامة لتجنب تفاصيل yt-dlp المعقدة
         error_message = str(e)
-        if "confirm you're not a bot" in error_message:
+        if "confirm you're not a bot" in error_message or "requires login" in error_message:
             display_error = "Error: This video requires login or is restricted. Please try another video."
         else:
             display_error = f"Failed to fetch video details: {error_message}"
@@ -103,8 +101,7 @@ def download_video():
         'quiet': True,
         'nocheckcertificate': True,
         'http_headers': STANDARD_HEADERS,
-        'geo_bypass': True,  # ✨ التعديل الثالث
-        'force_ipv4': True,  # ✨ التعديل الرابع
+        # تم حذف خيارات geo_bypass و force_ipv4 ليعتمد على yt-dlp.conf
     }
 
     if convert_to == 'mp3':
@@ -150,6 +147,5 @@ def download_video():
         return f"Download Failed: {str(e)}", 500
 
 if __name__ == '__main__':
-    # لا داعي لتشغيله محليًا إذا كنت تستخدم Render
-    # app.run(debug=True, host='0.0.0.0', port=5000)
+    # لا داعي لتشغيله محليًا إذا كنت تستخدم Render (تم إيقاف التشغيل)
     pass
