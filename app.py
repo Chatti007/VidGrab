@@ -2,7 +2,7 @@ import os
 import time
 import re
 import unicodedata
-from flask import Flask, request, send_file, after_this_request
+from flask import Flask, request, send_file, after_this_request, render_template_string
 import yt_dlp
 
 app = Flask(__name__)
@@ -22,11 +22,41 @@ def sanitize_filename(filename):
     cleaned = re.sub(r'[<>:"/\\|?*]', '', cleaned)
     return cleaned
 
+# صفحة HTML بسيطة
+HTML_PAGE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VidGrab Downloader</title>
+</head>
+<body>
+<h2>VidGrab - تحميل الفيديوهات</h2>
+<form action="/download" method="post">
+<label>رابط الفيديو:</label><br>
+<input type="text" name="url" size="50" required><br><br>
+<label>الصيغة:</label><br>
+<select name="format">
+  <option value="mp3-high">MP3 عالي الجودة</option>
+  <option value="mp3-low">MP3 منخفض الجودة</option>
+  <option value="mp4-high">MP4 عالي الجودة</option>
+  <option value="mp4-low">MP4 منخفض الجودة</option>
+  <option value="3gp">3GP</option>
+</select><br><br>
+<input type="submit" value="تحميل">
+</form>
+</body>
+</html>
+"""
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template_string(HTML_PAGE)
+
 @app.route("/download", methods=["POST"])
 def download():
-    data = request.json
-    url = data.get("url")
-    format_id = data.get("format", "mp4-high")  # افتراضي mp4-high
+    url = request.form.get("url")
+    format_id = request.form.get("format", "mp4-high")
     unique_name = str(int(time.time()))
     
     # إخراج الملفات
@@ -52,10 +82,15 @@ def download():
             }],
         })
         found_ext = 'mp3'
+    elif format_id == '3gp':
+        ydl_opts['format'] = 'worstaudio/worst'
+        ydl_opts['merge_output_format'] = '3gp'
+        found_ext = '3gp'
     else:
-        # صيغة فيديو
+        # صيغة فيديو mp4
         ydl_opts['format'] = f"{format_id}+bestaudio/best"
         ydl_opts['merge_output_format'] = 'mp4'
+        found_ext = 'mp4'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -68,8 +103,6 @@ def download():
         if not final_file:
             return "File not found", 500
 
-        found_ext = final_file.split('.')[-1]
-
         @after_this_request
         def clean(response):
             try:
@@ -79,7 +112,6 @@ def download():
                 pass
             return response
 
-        # إرسال الملف للمستخدم مع اسم آمن UTF-8
         return send_file(
             final_file,
             as_attachment=True,
@@ -90,7 +122,6 @@ def download():
     except Exception as e:
         return f"Download Failed: {e}", 500
 
-# تشغيل على Railway أو محلي
 if __name__ == "__main__":
     from os import environ
     app.run(host="0.0.0.0", port=int(environ.get("PORT", 5000)))
