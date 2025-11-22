@@ -223,21 +223,11 @@
                         </div>
                     </div>
                 </div>
-
                 <form action="/download" method="POST" id="downloadForm" target="dummyframe">
                     <input type="hidden" name="url" id="hiddenUrl">
                     
-                    <label>Format Type</label>
-                    <select name="convert_to" id="formatSelect">
-                        <option value="mp4">MP4 (Video)</option>
-                        <option value="mp3">MP3 (Audio)</option>
-                        <option value="mkv">MKV (High Quality)</option>
-                    </select>
-
-                    <div id="qualityWrapper">
-                        <label>Video Quality</label>
-                        <select name="format_id" id="qualitySelect"></select>
-                    </div>
+                    <label>Select Format & Quality</label>
+                    <select name="format_id" id="formatSelect" required></select>
 
                     <button type="submit" class="btn-download" onclick="triggerToast()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -340,11 +330,13 @@
             const loader = document.getElementById('loader');
             const resultArea = document.getElementById('resultArea');
             const btn = document.querySelector('.btn-search');
+            const formatSelect = document.getElementById('formatSelect');
 
             loader.style.display = 'block';
             resultArea.style.display = 'none';
             btn.disabled = true;
             btn.innerText = "Searching...";
+            formatSelect.innerHTML = ''; // مسح الخيارات القديمة
 
             try {
                 const res = await fetch('/get-info', {
@@ -363,19 +355,45 @@
                 document.getElementById('duration').innerText = data.duration || 'Unknown';
                 document.getElementById('platform').innerText = data.platform || 'Video';
                 document.getElementById('hiddenUrl').value = url;
-
-                // Fill Quality Options
-                const qSelect = document.getElementById('qualitySelect');
-                qSelect.innerHTML = '<option value="best">Auto (Best Quality)</option>';
                 
-                data.formats.forEach(f => {
-                    const opt = document.createElement('option');
-                    opt.value = f.format_id;
-                    opt.text = `${f.resolution}p • ${f.filesize || '? MB'} • ${f.ext}`;
-                    qSelect.appendChild(opt);
-                });
+                // ملء قائمة الاختيارات الموحدة
+                
+                // 1. مجموعة خيارات الفيديو
+                if (data.video_formats && data.video_formats.length > 0) {
+                    let videoGroup = document.createElement('optgroup');
+                    videoGroup.label = 'Video Formats (MP4, WebM, 3GP)';
+                    data.video_formats.forEach(f => {
+                        let option = document.createElement('option');
+                        option.value = f.format_id;
+                        option.textContent = `${f.resolution} (${f.ext}) - ${f.filesize}`;
+                        videoGroup.appendChild(option);
+                    });
+                    formatSelect.appendChild(videoGroup);
+                }
+
+                // 2. مجموعة خيارات الصوت
+                if (data.audio_formats && data.audio_formats.length > 0) {
+                    let audioGroup = document.createElement('optgroup');
+                    audioGroup.label = 'Audio Formats (MP3, M4A)';
+                    data.audio_formats.forEach(f => {
+                        let option = document.createElement('option');
+                        option.value = f.format_id;
+                        option.textContent = `${f.resolution} (${f.ext}) - ${f.filesize}`;
+                        audioGroup.appendChild(option);
+                    });
+                    formatSelect.appendChild(audioGroup);
+                }
+                
+                // تحديد أول خيار للفيديو كخيار افتراضي
+                if (formatSelect.options.length > 0) {
+                     formatSelect.options[0].selected = true;
+                } else {
+                     throw new Error("No available formats found for this video.");
+                }
 
                 resultArea.style.display = 'block';
+                document.getElementById('downloadForm').scrollIntoView({ behavior: 'smooth' });
+
 
             } catch (err) {
                 showToast("Error: " + err.message);
@@ -385,13 +403,6 @@
                 btn.innerText = "Get Video";
             }
         }
-
-        // Format selection logic
-        document.getElementById('formatSelect').addEventListener('change', function() {
-            const qualityWrapper = document.getElementById('qualityWrapper');
-            if(this.value === 'mp3') qualityWrapper.style.display = 'none';
-            else qualityWrapper.style.display = 'block';
-        });
 
         // Toast Notification Function
         function showToast(message) {
@@ -406,11 +417,10 @@
             // Reset UI after small delay
             setTimeout(() => {
                  document.getElementById('urlInput').value = "";
-                 // document.getElementById('resultArea').style.display = 'none'; 
+                 // لا داعي لإخفاء resultArea ليبقى للمستخدم فرصة للتحميل بصيغة أخرى
             }, 2000);
         }
     </script>
 
 </body>
 </html>
-
