@@ -22,7 +22,7 @@ def format_bytes(size):
         n += 1
     return f"{size:.2f}{power_labels[n]}B"
 
-# إعدادات الرأس (Headers) لتقليد متصفح حقيقي (لمنع الحظر)
+# إعدادات الرأس لتقليد متصفح حقيقي (لمنع الحظر)
 STANDARD_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Accept-Language': 'en-US,en;q=0.9',
@@ -44,7 +44,9 @@ def get_info():
         'quiet': True, 
         'no_warnings': True, 
         'nocheckcertificate': True,
-        'http_headers': STANDARD_HEADERS
+        'http_headers': STANDARD_HEADERS,
+        'geo_bypass': True,  # ✨ التعديل الأول: لتجاوز القيود الجغرافية
+        'force_ipv4': True,  # ✨ التعديل الثاني: لإجبار الاتصال على IPv4 (يساعد في بعض مشاكل الاتصال)
     }
     
     try:
@@ -73,7 +75,14 @@ def get_info():
                 'formats': formats_list[:15]
             })
     except Exception as e:
-        return jsonify({'error': f"Failed to get info: {str(e)}"}), 500
+        # إرجاع خطأ أو رسالة عامة لتجنب تفاصيل yt-dlp المعقدة
+        error_message = str(e)
+        if "confirm you're not a bot" in error_message:
+            display_error = "Error: This video requires login or is restricted. Please try another video."
+        else:
+            display_error = f"Failed to fetch video details: {error_message}"
+            
+        return jsonify({'error': display_error}), 500
 
 # 📥 تحميل الفيديو
 # -------------------------------------------------------------------
@@ -93,7 +102,9 @@ def download_video():
         'outtmpl': output_template,
         'quiet': True,
         'nocheckcertificate': True,
-        'http_headers': STANDARD_HEADERS
+        'http_headers': STANDARD_HEADERS,
+        'geo_bypass': True,  # ✨ التعديل الثالث
+        'force_ipv4': True,  # ✨ التعديل الرابع
     }
 
     if convert_to == 'mp3':
@@ -139,6 +150,6 @@ def download_video():
         return f"Download Failed: {str(e)}", 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-
+    # لا داعي لتشغيله محليًا إذا كنت تستخدم Render
+    # app.run(debug=True, host='0.0.0.0', port=5000)
+    pass
