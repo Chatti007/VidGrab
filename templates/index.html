@@ -227,7 +227,9 @@
                     <input type="hidden" name="url" id="hiddenUrl">
                     
                     <label>Select Format & Quality</label>
-                    <select name="format_id" id="formatSelect" required></select>
+                    <select name="format_id" id="formatSelect" required>
+                        <option value="" disabled selected>Loading formats...</option>
+                    </select>
 
                     <button type="submit" class="btn-download" onclick="triggerToast()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -336,7 +338,7 @@
             resultArea.style.display = 'none';
             btn.disabled = true;
             btn.innerText = "Searching...";
-            formatSelect.innerHTML = ''; // مسح الخيارات القديمة
+            formatSelect.innerHTML = '<option value="" disabled selected>Select Format & Quality</option>'; // مسح الخيارات القديمة
 
             try {
                 const res = await fetch('/get-info', {
@@ -357,14 +359,15 @@
                 document.getElementById('hiddenUrl').value = url;
                 
                 // ملء قائمة الاختيارات الموحدة
-                
+
                 // 1. مجموعة خيارات الفيديو
                 if (data.video_formats && data.video_formats.length > 0) {
                     let videoGroup = document.createElement('optgroup');
-                    videoGroup.label = 'Video Formats (MP4, WebM, 3GP)';
+                    videoGroup.label = 'Video Formats (MP4, WebM, 3GP...)';
                     data.video_formats.forEach(f => {
                         let option = document.createElement('option');
                         option.value = f.format_id;
+                        // نستخدم f.resolution و f.ext و f.filesize لعرض معلومات كاملة
                         option.textContent = `${f.resolution} (${f.ext}) - ${f.filesize}`;
                         videoGroup.appendChild(option);
                     });
@@ -384,9 +387,14 @@
                     formatSelect.appendChild(audioGroup);
                 }
                 
-                // تحديد أول خيار للفيديو كخيار افتراضي
+                // تحديد أول خيار كخيار افتراضي
                 if (formatSelect.options.length > 0) {
                      formatSelect.options[0].selected = true;
+                     formatSelect.options[0].disabled = true; // نمنع اختيار خيار "Select Format & Quality"
+                     // نحدد أول خيار متاح (بافتراض أنه أفضل جودة فيديو)
+                     if(formatSelect.options.length > 1) {
+                        formatSelect.options[1].selected = true;
+                     }
                 } else {
                      throw new Error("No available formats found for this video.");
                 }
@@ -416,8 +424,7 @@
             showToast("Downloading... Check your browser status bar ⬇️");
             // Reset UI after small delay
             setTimeout(() => {
-                 document.getElementById('urlInput').value = "";
-                 // لا داعي لإخفاء resultArea ليبقى للمستخدم فرصة للتحميل بصيغة أخرى
+                 // document.getElementById('urlInput').value = ""; // أبقي الرابط في مكانه لسهولة التحميل بصيغة أخرى
             }, 2000);
         }
     </script>
