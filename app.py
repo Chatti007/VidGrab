@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, send_file, jsonify, after_thi
 import yt_dlp
 import os
 import uuid
-import time
+import time 
 
 app = Flask(__name__)
 
@@ -13,11 +13,10 @@ if not os.path.exists(TEMP_FOLDER):
 
 # دالة لتحويل حجم الملف إلى نص مقروء
 def format_bytes(size):
-    if not size:
-        return "Unknown"
+    if not size: return "Unknown"
     power = 2**10
     n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
+    power_labels = {0 : '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
     while size > power:
         size /= power
         n += 1
@@ -39,17 +38,16 @@ def home():
 @app.route('/get-info', methods=['POST'])
 def get_info():
     url = request.json.get('url')
-    if not url:
-        return jsonify({'error': 'Please provide a URL'}), 400
+    if not url: return jsonify({'error': 'Please provide a URL'}), 400
 
     ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': True, 
+        'no_warnings': True, 
         'nocheckcertificate': True,
         'http_headers': STANDARD_HEADERS,
     }
-
-    # --- أهم Bypassات ضد YouTube bot detection ---
+    
+    # Bypassات ضد YouTube bot detection
     ydl_opts["extractor_args"] = {
         "youtube": {
             "player_client": ["ios", "android", "web_embedded"],
@@ -60,29 +58,77 @@ def get_info():
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # process=False يقلّل فرصة الـ bot check
+            # process=False لتقليل فرصة الـ bot check
             info = ydl.extract_info(url, download=False, process=False)
-
-            formats_list = []
+            
+            video_formats = []
+            audio_formats = []
+            seen_resolutions = set()
+            
+            # 1. جمع وتصنيف الصيغ
             for f in info.get('formats', []):
-                if f.get('vcodec') != 'none' and f.get('resolution') != 'audio only':
-                    size = f.get('filesize') or f.get('filesize_approx')
-                    formats_list.append({
+                size = f.get('filesize') or f.get('filesize_approx')
+                
+                # A. صيغ الفيديو (مع دمج الصوت التلقائي إذا كانت بدون صوت)
+                if f.get('vcodec') != 'none' and f.get('ext') in ['mp4', 'webm', '3gp', 'flv']:
+                    res = f.get('resolution')
+                    # نضيف فقط صيغ الفيديو التي لها دقة محددة
+                    if res and res != 'none' and res not in seen_resolutions: 
+                        video_formats.append({
+                            'format_id': f['format_id'],
+                            'ext': f['ext'],
+                            'resolution': res,
+                            'filesize': format_bytes(size),
+                            'note': f.get('format_note', 'Video')
+                        })
+                        seen_resolutions.add(res)
+                        
+                # B. صيغ الصوت النقي
+                elif f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('ext') in ['m4a', 'webm', 'ogg']:
+                    audio_formats.append({
                         'format_id': f['format_id'],
                         'ext': f['ext'],
-                        'resolution': f.get('resolution') or f.get('height'),
+                        'resolution': f'{f.get("abr", "Unknown")} kbps', # Audio Bitrate
                         'filesize': format_bytes(size),
-                        'note': f.get('format_note', '')
+                        'note': f.get('format_note', 'Audio')
                     })
+            
+            # 2. إضافة خيارات تحويل MP3 (لتحديد الجودة مع الحجم المقدر)
+            if info.get('duration') and info.get('duration') > 0:
+                duration_sec = info.get('duration')
+                
+                # تقدير الحجم لـ 320 kbps (جودة عالية)
+                size_high = (duration_sec * 320000) / 8 
+                audio_formats.insert(0, {
+                    'format_id': 'mp3-high',
+                    'ext': 'mp3',
+                    'resolution': '320 kbps (High Quality)',
+                    'filesize': format_bytes(size_high),
+                    'note': 'Convert to MP3'
+                })
+                
+                # تقدير الحجم لـ 128 kbps (جودة قياسية)
+                size_low = (duration_sec * 128000) / 8 
+                audio_formats.insert(0, {
+                    'format_id': 'mp3-low',
+                    'ext': 'mp3',
+                    'resolution': '128 kbps (Standard)',
+                    'filesize': format_bytes(size_low),
+                    'note': 'Convert to MP3'
+                })
 
-            formats_list.reverse()
+            # 3. الفرز وتجهيز الخرج
+            # الفرز بناءً على الدقة (الأعلى أولاً)
+            video_formats.sort(key=lambda x: int(x.get('resolution').split('x')[0]) if 'x' in x.get('resolution', '0') else 0, reverse=True)
+            audio_formats.sort(key=lambda x: x.get('resolution', 'Z'), reverse=True)
 
             return jsonify({
                 'title': info.get('title'),
                 'thumbnail': info.get('thumbnail'),
                 'duration': info.get('duration_string'),
                 'platform': info.get('extractor_key'),
-                'formats': formats_list[:15]
+                'video_formats': video_formats,
+                'audio_formats': audio_formats
             })
 
     except Exception as e:
@@ -93,7 +139,8 @@ def get_info():
             "login required" in error_message):
 
             return jsonify({
-                'error': "⚠️ الفيديو يحتاج تسجيل دخول أو YouTube قام بحظر الطلب. جرّب فيديو آخر أو فعّل كوكيز المتصفح."
+                # رسالة خطأ واضحة للمستخدم
+                'error': "⚠️ الفيديو مقيّد بشدة ويحتاج تسجيل دخول أو YouTube قام بحظر الطلب. يُرجى تجربة رابط آخر."
             }), 500
 
         return jsonify({'error': f"Failed: {error_message}"}), 500
@@ -106,13 +153,15 @@ def get_info():
 def download_video():
     url = request.form.get('url')
     format_id = request.form.get('format_id')
-    convert_to = request.form.get('convert_to')
-
-    if not url:
-        return "Invalid URL", 400
+    
+    if not url or not format_id:
+        return "Invalid URL or format selection", 400
 
     unique_name = str(uuid.uuid4())
     output_template = f'{TEMP_FOLDER}/{unique_name}.%(ext)s'
+    
+    # تحديد اللاحقة الافتراضية، ستتغير لاحقاً
+    found_ext = 'mp4' 
 
     ydl_opts = {
         'outtmpl': output_template,
@@ -121,7 +170,7 @@ def download_video():
         'http_headers': STANDARD_HEADERS,
     }
 
-    # نفس bypass المستعمل للـ get-info
+    # Bypassات
     ydl_opts["extractor_args"] = {
         "youtube": {
             "player_client": ["ios", "android", "web_embedded"],
@@ -129,33 +178,53 @@ def download_video():
         }
     }
 
-    # تحويل MP3
-    if convert_to == 'mp3':
+    # --- معالجة خيارات التحميل الجديدة ---
+    if format_id.startswith('mp3-'):
+        # 1. تحويل MP3
+        bitrate = '320K' if format_id == 'mp3-high' else '128K'
+        
         ydl_opts.update({
             'format': 'bestaudio/best',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3'
+                'preferredcodec': 'mp3',
+                'preferredquality': bitrate # استخدام الجودة المحددة
             }],
         })
+        found_ext = 'mp3'
+        
     else:
-        ydl_opts['merge_output_format'] = convert_to
-        if format_id and format_id != 'best':
-            ydl_opts['format'] = f"{format_id}+bestaudio/best"
-        else:
-            ydl_opts['format'] = "bestvideo+bestaudio/best"
+        # 2. صيغ الفيديو أو الصوت النقي المحددة
+        
+        # دائماً حاول دمج الفيديو مع أفضل صوت متاح
+        ydl_opts['format'] = f"{format_id}+bestaudio/best"
+        
+        # دمج النتيجة النهائية إلى mp4 (للفيديو)
+        ydl_opts['merge_output_format'] = 'mp4'
+        
+        # استثناء: إذا كان Format ID هو لصيغة صوت نقي، يجب ألا ندمج الفيديو/الصوت
+        # هذا الجزء معقد ويجب أن يتطلب الوصول إلى بيانات info مرة أخرى، لكن لتجنب الاتصال مرتين
+        # سنعتمد على أن yt-dlp سيتجاهل الدمج إذا كان format_id هو لصيغة صوت صافية.
+        # مع yt-dlp، الدمج لا يتم إلا إذا كان هناك حاجة لذلك.
+        
+        # لضمان اللاحقة الصحيحة:
+        if 'audio' in format_id or 'm4a' in format_id or 'webm' in format_id:
+            if format_id != 'bestaudio':
+                 ydl_opts['format'] = format_id # حمل الصوت فقط
+                 ydl_opts['merge_output_format'] = None # لا تدمج
+                 found_ext = 'm4a' # قد يكون webm أو m4a
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
         final_file = None
-        found_ext = convert_to
-
+        
+        # البحث عن الملف الناتج (تحديد اللاحقة الحقيقية)
         for f in os.listdir(TEMP_FOLDER):
             if f.startswith(unique_name):
                 final_file = os.path.join(TEMP_FOLDER, f)
-                found_ext = f.split('.')[-1]
+                found_ext = f.split('.')[-1] # اللاحقة الحقيقية للملف
                 break
 
         if not final_file:
