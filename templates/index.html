@@ -171,12 +171,26 @@
             transition: opacity 0.3s, bottom 0.3s;
         }
         .toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+        .toast.error { border-color: #ef4444; }
         .toast svg { stroke: #10b981; width: 24px; height: 24px; }
+        .toast.error svg { stroke: #ef4444; }
 
         /* Loader */
         .loader { display: none; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Error Message */
+        .error-message {
+            display: none;
+            background: #dc2626;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            border: 1px solid #ef4444;
+        }
 
         /* Responsive */
         @media (max-width: 600px) {
@@ -212,6 +226,8 @@
             <button class="btn-search" onclick="fetchInfo()">Get Video</button>
             <div class="loader" id="loader"></div>
 
+            <div class="error-message" id="errorMessage"></div>
+
             <div id="resultArea">
                 <div class="video-meta">
                     <img id="thumb" src="" alt="Thumbnail">
@@ -225,13 +241,14 @@
                 </div>
                 <form action="/download" method="POST" id="downloadForm" target="dummyframe">
                     <input type="hidden" name="url" id="hiddenUrl">
+                    <input type="hidden" name="convert_to" id="convertTo" value="">
                     
                     <label>Select Format & Quality</label>
                     <select name="format_id" id="formatSelect" required>
                         <option value="" disabled selected>Loading formats...</option>
                     </select>
 
-                    <button type="submit" class="btn-download" onclick="triggerToast()">
+                    <button type="submit" class="btn-download" onclick="return validateDownload()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Download Now
                     </button>
@@ -258,7 +275,7 @@
                     Facebook
                 </div>
                 <div class="site-item">
-                    <svg viewBox="0 0 24 24" fill="#000000" stroke="white" stroke-width="1.5"><path d="M12.43 24c6.627 0 12-5.373 12-12s-5.373-12-12-12C5.804 0 .43 5.373.43 12s5.373 12 12 12zM12.43 24" fill="none"/><path d="M16.88 2.78v3.69c-2.63-.08-4.38 1.67-4.48 4.47h4.33l-.58 4.19h-3.75v10.83h-5.19v-10.83h-2.6v-4.19h2.6v-2.69c0-3.71 2.05-5.82 5.46-5.82 1.64 0 3.08.12 3.08.12z" fill="white"/></svg>
+                    <svg viewBox="0 0 24 24" fill="#000000" stroke="white" stroke-width="1.5"><path d="M12.43 24c6.627 0 12-5.373 12-12s-5.373-12-12-12C5.804 0 .43 5.373 .43 12s5.373 12 12 12zM12.43 24" fill="none"/><path d="M16.88 2.78v3.69c-2.63-.08-4.38 1.67-4.48 4.47h4.33l-.58 4.19h-3.75v10.83h-5.19v-10.83h-2.6v-4.19h2.6v-2.69c0-3.71 2.05-5.82 5.46-5.82 1.64 0 3.08.12 3.08.12z" fill="white"/></svg>
                     TikTok
                 </div>
                 <div class="site-item">
@@ -301,6 +318,14 @@
                     <li>Works on Android, iPhone, Windows, and Mac.</li>
                     <li>Safe and secure: no data is stored on our servers.</li>
                 </ul>
+
+                <h3>Supported Formats</h3>
+                <ul>
+                    <li><strong>MP4</strong> - High quality video format</li>
+                    <li><strong>3GP</strong> - Compatible with mobile devices</li>
+                    <li><strong>MP3</strong> - High quality audio format</li>
+                    <li><strong>WebM</strong> - Modern web video format</li>
+                </ul>
             </div>
 
         </div>
@@ -319,26 +344,39 @@
             try {
                 const text = await navigator.clipboard.readText();
                 document.getElementById('urlInput').value = text;
+                showToast("Link pasted successfully!", "success");
             } catch (err) {
-                alert('Clipboard access denied. Please paste manually.');
+                showToast("Clipboard access denied. Please paste manually.", "error");
             }
         }
 
         // Fetch Video Info
         async function fetchInfo() {
-            const url = document.getElementById('urlInput').value;
-            if(!url) return showToast("Please enter a valid URL first!");
+            const url = document.getElementById('urlInput').value.trim();
+            if(!url) {
+                showToast("Please enter a valid URL first!", "error");
+                return;
+            }
+
+            // التحقق من أن الرابط يحتوي على نطاق صالح
+            if (!url.includes('.') || url.length < 10) {
+                showToast("Please enter a valid video URL", "error");
+                return;
+            }
 
             const loader = document.getElementById('loader');
             const resultArea = document.getElementById('resultArea');
+            const errorMessage = document.getElementById('errorMessage');
             const btn = document.querySelector('.btn-search');
             const formatSelect = document.getElementById('formatSelect');
 
+            // إعادة تعيين الحالة
             loader.style.display = 'block';
             resultArea.style.display = 'none';
+            errorMessage.style.display = 'none';
             btn.disabled = true;
             btn.innerText = "Searching...";
-            formatSelect.innerHTML = '<option value="" disabled selected>Select Format & Quality</option>'; // مسح الخيارات القديمة
+            formatSelect.innerHTML = '<option value="" disabled selected>Loading formats...</option>';
 
             try {
                 const res = await fetch('/get-info', {
@@ -358,53 +396,88 @@
                 document.getElementById('platform').innerText = data.platform || 'Video';
                 document.getElementById('hiddenUrl').value = url;
                 
-                // ملء قائمة الاختيارات الموحدة
+                // مسح وإعادة تعيين قائمة التنسيقات
+                formatSelect.innerHTML = '';
+                
+                // إضافة خيار افتراضي
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "Select Format & Quality";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                formatSelect.appendChild(defaultOption);
 
-                // 1. مجموعة خيارات الفيديو
+                // إضافة تنسيقات الفيديو
                 if (data.video_formats && data.video_formats.length > 0) {
                     let videoGroup = document.createElement('optgroup');
-                    videoGroup.label = 'Video Formats (MP4, WebM, 3GP...)';
+                    videoGroup.label = '🎥 Video Formats (MP4, 3GP, WebM)';
+                    
                     data.video_formats.forEach(f => {
                         let option = document.createElement('option');
                         option.value = f.format_id;
-                        // نستخدم f.resolution و f.ext و f.filesize لعرض معلومات كاملة
-                        option.textContent = `${f.resolution} (${f.ext}) - ${f.filesize}`;
+                        let quality = f.resolution || (f.height ? f.height + 'p' : 'N/A');
+                        let label = `${quality} (${f.ext}) - ${f.filesize}`;
+                        if (f.format_note && f.format_note !== 'N/A') {
+                            label += ` [${f.format_note}]`;
+                        }
+                        option.textContent = label;
                         videoGroup.appendChild(option);
                     });
                     formatSelect.appendChild(videoGroup);
                 }
 
-                // 2. مجموعة خيارات الصوت
+                // إضافة خيار أفضل جودة فيديو
+                let bestVideoOption = document.createElement('option');
+                bestVideoOption.value = "best";
+                bestVideoOption.textContent = "🎯 Best Video Quality (Recommended)";
+                formatSelect.appendChild(bestVideoOption);
+
+                // إضافة تنسيقات الصوت
                 if (data.audio_formats && data.audio_formats.length > 0) {
                     let audioGroup = document.createElement('optgroup');
-                    audioGroup.label = 'Audio Formats (MP3, M4A)';
+                    audioGroup.label = '🎵 Audio Formats';
+                    
+                    // إضافة خيار تحويل إلى MP3
+                    let mp3Option = document.createElement('option');
+                    mp3Option.value = "mp3";
+                    mp3Option.textContent = "MP3 Audio (Best Quality - 192kbps)";
+                    audioGroup.appendChild(mp3Option);
+                    
                     data.audio_formats.forEach(f => {
                         let option = document.createElement('option');
                         option.value = f.format_id;
-                        option.textContent = `${f.resolution} (${f.ext}) - ${f.filesize}`;
+                        let label = `Audio (${f.ext}) - ${f.filesize}`;
+                        if (f.format_note) label += ` [${f.format_note}]`;
+                        option.textContent = label;
                         audioGroup.appendChild(option);
                     });
                     formatSelect.appendChild(audioGroup);
                 }
-                
-                // تحديد أول خيار كخيار افتراضي
-                if (formatSelect.options.length > 0) {
-                     formatSelect.options[0].selected = true;
-                     formatSelect.options[0].disabled = true; // نمنع اختيار خيار "Select Format & Quality"
-                     // نحدد أول خيار متاح (بافتراض أنه أفضل جودة فيديو)
-                     if(formatSelect.options.length > 1) {
-                        formatSelect.options[1].selected = true;
-                     }
-                } else {
-                     throw new Error("No available formats found for this video.");
+
+                // إذا لم توجد تنسيقات
+                if (formatSelect.options.length <= 1) {
+                    let option = document.createElement('option');
+                    option.value = "best";
+                    option.textContent = "Best Available Quality";
+                    formatSelect.appendChild(option);
                 }
 
                 resultArea.style.display = 'block';
-                document.getElementById('downloadForm').scrollIntoView({ behavior: 'smooth' });
-
+                showToast("Video info loaded successfully!", "success");
+                
+                // التمرير إلى النتائج
+                setTimeout(() => {
+                    document.getElementById('downloadForm').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }, 500);
 
             } catch (err) {
-                showToast("Error: " + err.message);
+                const errorMsg = document.getElementById('errorMessage');
+                errorMsg.textContent = "Error: " + err.message;
+                errorMsg.style.display = 'block';
+                showToast("Failed to load video info", "error");
             } finally {
                 loader.style.display = 'none';
                 btn.disabled = false;
@@ -412,22 +485,84 @@
             }
         }
 
+        // إعداد تحويل الصوت عند اختيار MP3
+        document.getElementById('formatSelect').addEventListener('change', function() {
+            const selectedValue = this.value;
+            const convertToInput = document.getElementById('convertTo');
+            
+            if (selectedValue === 'mp3') {
+                convertToInput.value = 'mp3';
+            } else {
+                convertToInput.value = '';
+            }
+        });
+
         // Toast Notification Function
-        function showToast(message) {
+        function showToast(message, type = "success") {
             const toast = document.getElementById("toast");
             toast.querySelector('span').innerText = message;
-            toast.className = "toast show";
-            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+            
+            // إعداد النوع (نجاح أو خطأ)
+            toast.className = "toast";
+            if (type === "error") {
+                toast.classList.add("error");
+            }
+            
+            toast.classList.add("show");
+            setTimeout(function(){ 
+                toast.className = toast.className.replace("show", "").replace("error", ""); 
+            }, 3000);
         }
 
-        function triggerToast() {
-            showToast("Downloading... Check your browser status bar ⬇️");
-            // Reset UI after small delay
-            setTimeout(() => {
-                 // document.getElementById('urlInput').value = ""; // أبقي الرابط في مكانه لسهولة التحميل بصيغة أخرى
-            }, 2000);
+        // Validate before download
+        function validateDownload() {
+            const formatSelect = document.getElementById('formatSelect');
+            const selectedOption = formatSelect.options[formatSelect.selectedIndex];
+            
+            if (!selectedOption || selectedOption.disabled || selectedOption.value === "") {
+                showToast("Please select a format first!", "error");
+                return false;
+            }
+            
+            const downloadText = selectedOption.value === 'mp3' ? 
+                "Converting to MP3..." : 
+                "Starting download...";
+            
+            showToast(downloadText, "success");
+            return true;
         }
+
+        // السماح بالضغط على Enter في حقل الإدخال
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                fetchInfo();
+            }
+        });
+
+        // تحسين تجربة المستخدم - إظهار تلميحات
+        document.getElementById('urlInput').addEventListener('focus', function() {
+            this.setAttribute('placeholder', 'Example: https://www.youtube.com/watch?v=...');
+        });
+
+        document.getElementById('urlInput').addEventListener('blur', function() {
+            this.setAttribute('placeholder', 'Paste video link here...');
+        });
+
+        // التحقق التلقائي من الحافظة عند تحميل الصفحة
+        window.addEventListener('load', async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.includes('youtube.com') || text.includes('youtu.be') || 
+                    text.includes('tiktok.com') || text.includes('instagram.com') ||
+                    text.includes('facebook.com')) {
+                    document.getElementById('urlInput').value = text;
+                    showToast("Video link detected from clipboard!", "success");
+                }
+            } catch (err) {
+                // تجاهل الأخطاء - المستخدم لم يسمح بالوصول للحافظة
+            }
+        });
     </script>
 
 </body>
-</html>
+                        </html>
