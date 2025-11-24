@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free Video Downloader - Support YouTube, TikTok, Facebook, Instagram. Download MP4, MP3, 3GP in high quality.">
+    <meta name="keywords" content="video download, youtube to mp3, tiktok download, video downloader">
+    <title>VidGrab - Free Video Downloader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6C63FF;
+            --primary-hover: #5a52d5;
+            --bg: #0f1117;
+            --card-bg: #1e212b;
+            --text: #ffffff;
+            --text-muted: #9ca3af;
+            --border: #2d3748;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Legal Banner */
+        .legal-banner {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 0;
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .legal-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .legal-content h4 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+        }
+
+        .legal-content p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .legal-links {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legal-link {
+            color: white;
+            text-decoration: none;
+            font-size: 0.8rem;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .legal-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        /* Header & Logo */
+        header {
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .logo svg { width: 40px; height: 40px; stroke: var(--primary); }
+        .logo-text { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+        .logo-text span { color: var(--primary); }
+        .tagline { color: var(--text-muted); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+
+        /* Main Tool Container */
+        .main-container {
+            max-width: 600px;
+            margin: 0 auto 4rem auto;
+            padding: 0 20px;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+        }
+
+        .input-wrapper { position: relative; margin-bottom: 1.5rem; }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            background: #13161c;
+            border: 2px solid #2d3748;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.2); }
+
+        .paste-btn {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            color: var(--primary);
+            font-size: 1.2rem; cursor: pointer;
+            padding: 5px;
+        }
+
+        .btn-search {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none; border-radius: 12px;
+            font-size: 1.1rem; font-weight: 600;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-search:hover { background: var(--primary-hover); }
+        .btn-search:disabled { opacity: 0.7; cursor: wait; }
+
+        /* Progress Bar */
+        .progress-container {
+            display: none;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .progress-percent {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #2d3748;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        /* Results Area */
+        #resultArea { display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border); animation: slideDown 0.4s ease; }
+        
+        .video-meta { display: flex; gap: 15px; margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; }
+        .video-meta img { width: 100px; height: 70px; object-fit: cover; border-radius: 8px; }
+        .meta-text h3 { font-size: 0.95rem; line-height: 1.4; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .meta-tags span { font-size: 0.75rem; background: #333; padding: 2px 8px; border-radius: 4px; color: #ccc; margin-right: 5px; }
+
+        select { width: 100%; padding: 14px; background: #13161c; border: 1px solid var(--border); color: white; border-radius: 10px; margin-bottom: 1rem; font-size: 1rem; outline: none; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+
+        .btn-download {
+            background: var(--success); color: white;
+            width: 100%; padding: 16px;
+            border: none; border-radius: 12px;
+            font-weight: 700; font-size: 1.1rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: 0.2s;
+        }
+        .btn-download:hover { background: #059669; transform: translateY(-2px); }
+
+        /* Content Section */
+        .content-section {
+            background: #161920;
+            padding: 4rem 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .content-container { max-width: 800px; margin: 0 auto; }
+        
+        .section-title { text-align: center; margin-bottom: 3rem; }
+        .section-title h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        .section-title p { color: var(--text-muted); }
+
+        /* Steps Grid */
+        .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-bottom: 4rem; }
+        .step-card { background: var(--card-bg); padding: 30px; border-radius: 16px; text-align: center; border: 1px solid var(--border); }
+        .step-icon { font-size: 2.5rem; margin-bottom: 15px; display: inline-block; }
+        .step-card h3 { margin-bottom: 10px; }
+        .step-card p { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Supported Sites Grid */
+        .sites-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; margin-bottom: 4rem; }
+        .site-item { display: flex; align-items: center; gap: 10px; background: var(--card-bg); padding: 12px 24px; border-radius: 50px; border: 1px solid var(--border); color: #fff; font-weight: 600; }
+        .site-item svg { width: 24px; height: 24px; }
+
+        /* Formats Grid */
+        .formats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 2rem 0; }
+        .format-item { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+        .format-icon { font-size: 2rem; margin-bottom: 10px; display: block; }
+        .format-item h4 { margin-bottom: 5px; color: var(--primary); }
+        .format-item p { color: var(--text-muted); font-size: 0.8rem; }
+
+        /* SEO Text */
+        .seo-text { color: var(--text-muted); font-size: 0.9rem; line-height: 1.8; }
+        .seo-text h3 { color: white; margin-top: 20px; margin-bottom: 10px; }
+        .seo-text ul { padding-left: 20px; margin-bottom: 20px; }
+
+        /* Footer */
+        .footer { background: #1a1d28; padding: 2rem 0; text-align: center; border-top: 1px solid var(--border); }
+        .footer-links { display: flex; justify-content: center; gap: 20px; margin-bottom: 1rem; flex-wrap: wrap; }
+        .footer-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+        .footer-link:hover { color: var(--primary); }
+        .copyright { color: var(--text-muted); font-size: 0.8rem; }
+
+        /* Toast Notification */
+        .toast {
+            visibility: hidden;
+            min-width: 300px;
+            background-color: #1e212b;
+            color: #fff;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--primary);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        .toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+        .toast.error { border-color: var(--error); }
+        .toast svg { stroke: var(--success); width: 24px; height: 24px; }
+        .toast.error svg { stroke: var(--error); }
+
+        /* Loader */
+        .loader { display: none; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Error Message */
+        .error-message {
+            display: none;
+            background: var(--error);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            border: 1px solid #ef4444;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .logo-text { font-size: 1.5rem; }
+            .tool-card { padding: 1.5rem; }
+            .sites-grid { gap: 10px; }
+            .site-item { font-size: 0.8rem; padding: 10px 15px; }
+            .formats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+            .legal-links { flex-direction: column; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Legal Banner -->
+    <div class="legal-banner">
+        <div class="legal-content">
+            <h4>⚖️ Important Legal Notice</h4>
+            <p>This site is for personal and educational use only. Users bear full responsibility for ensuring content usage rights.</p>
+            <div class="legal-links">
+                <a href="/privacy" class="legal-link">Privacy</a>
+                <a href="/terms" class="legal-link">Terms</a>
+                <a href="/dmca" class="legal-link">DMCA</a>
+                <a href="/fair-use" class="legal-link">Fair Use</a>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <div class="logo-text">Vid<span>Grab</span></div>
+        </div>
+        <p class="tagline">Download videos from YouTube, TikTok, Facebook and Instagram with one click</p>
+    </header>
+
+    <div class="main-container">
+        <div class="tool-card">
+            <div class="input-wrapper">
+                <input type="text" id="urlInput" placeholder="Paste video link here...">
+                <button class="paste-btn" onclick="pasteLink()" title="Paste Link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                </button>
+            </div>
+            <button class="btn-search" onclick="fetchInfo()">Get Video Info</button>
+            <div class="loader" id="loader"></div>
+
+            <!-- Progress Bar -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-header">
+                    <div class="progress-text" id="progressText">Starting download...</div>
+                    <div class="progress-percent" id="progressPercent">0%</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div id="resultArea">
+                <div class="video-meta">
+                    <img id="thumb" src="" alt="Thumbnail">
+                    <div class="meta-text">
+                        <h3 id="videoTitle">Video Title</h3>
+                        <div class="meta-tags">
+                            <span id="duration">00:00</span>
+                            <span id="platform">Platform</span>
+                        </div>
+                    </div>
+                </div>
+                <form action="/download" method="POST" id="downloadForm">
+                    <input type="hidden" name="url" id="hiddenUrl">
+                    <input type="hidden" name="format_id" id="formatId">
+                    
+                    <label>Select Quality and Format</label>
+                    <select id="formatSelect" required>
+                        <option value="" disabled selected>Loading options...</option>
+                    </select>
+
+                    <button type="submit" class="btn-download" onclick="startDownload()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Download Now
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <section class="content-section">
+        <div class="content-container">
+            
+            <div class="section-title">
+                <h2>Supported Platforms</h2>
+                <p>Download videos from 1000+ sites including all major social media platforms</p>
+            </div>
+
+            <div class="sites-grid">
+                <div class="site-item">
+                    <svg viewBox="0 0 24 24" fill="#FF0000" stroke="none"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    YouTube
+                </div>
+                <div class="site-item">
+                    <svg viewBox="0 0 24 24" fill="#1877F2" stroke="none"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    Facebook
+                </div>
+                <div class="site-item">
+                    <svg viewBox="0 0 24 24" fill="#000000" stroke="white" stroke-width="1.5"><path d="M12.43 24c6.627 0 12-5.373 12-12s-5.373-12-12-12C5.804 0 .43 5.373 .43 12s5.373 12 12 12zM12.43 24" fill="none"/><path d="M16.88 2.78v3.69c-2.63-.08-4.38 1.67-4.48 4.47h4.33l-.58 4.19h-3.75v10.83h-5.19v-10.83h-2.6v-4.19h2.6v-2.69c0-3.71 2.05-5.82 5.46-5.82 1.64 0 3.08.12 3.08.12z" fill="white"/></svg>
+                    TikTok
+                </div>
+                <div class="site-item">
+                    <svg viewBox="0 0 24 24" fill="#E1306C" stroke="none"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm7.846-10.405a1.44 1.44 0 1 1-2.88 0 1.44 1.44 0 0 1 2.88 0z"/></svg>
+                    Instagram
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h2>Supported Formats</h2>
+                <p>Download in all common video and audio formats with multiple quality options</p>
+            </div>
+
+            <div class="formats-grid">
+                <div class="format-item">
+                    <span class="format-icon">🎥</span>
+                    <h4>MP4</h4>
+                    <p>Universal video format compatible with all devices</p>
+                </div>
+                <div class="format-item">
+                    <span class="format-icon">🎵</span>
+                    <h4>MP3</h4>
+                    <p>High quality audio format for music and podcasts</p>
+                </div>
+                <div class="format-item">
+                    <span class="format-icon">📱</span>
+                    <h4>3GP</h4>
+                    <p>Mobile-optimized format compatible with older devices</p>
+                </div>
+                <div class="format-item">
+                    <span class="format-icon">🌐</span>
+                    <h4>WebM</h4>
+                    <p>Modern web format with excellent compression</p>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h2>How to Download?</h2>
+            </div>
+
+            <div class="steps-grid">
+                <div class="step-card">
+                    <span class="step-icon">🔗</span>
+                    <h3>1. Copy Link</h3>
+                    <p>Copy the video link you want to download from the app or browser</p>
+                </div>
+                <div class="step-card">
+                    <span class="step-icon">📋</span>
+                    <h3>2. Paste Here</h3>
+                    <p>Click the paste button in the search bar above to instantly enter the link</p>
+                </div>
+                <div class="step-card">
+                    <span class="step-icon">⬇️</span>
+                    <h3>3. Download</h3>
+                    <p>Choose your preferred format and quality (MP4/MP3) then click download</p>
+                </div>
+            </div>
+
+            <div class="seo-text">
+                <h3>Why Use VidGrab?</h3>
+                <p>VidGrab is the most advanced video downloader tool that allows you to save videos from all social media platforms without watermarks. Whether you need a TikTok video downloader, YouTube to MP3 converter, or Instagram video saver, our tool handles it all for free.</p>
+                
+                <h3>Features</h3>
+                <ul>
+                    <li>Unlimited downloads without any restrictions</li>
+                    <li>High-speed conversion and download servers</li>
+                    <li>Support for MP4, MP3, 3GP, WebM formats</li>
+                    <li>Works on Android, iPhone, Windows, and Mac</li>
+                    <li>Safe & secure: No data stored on our servers</li>
+                    <li>No registration required - completely free</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-links">
+            <a href="/privacy" class="footer-link">Privacy Policy</a>
+            <a href="/terms" class="footer-link">Terms of Use</a>
+            <a href="/dmca" class="footer-link">DMCA</a>
+            <a href="/fair-use" class="footer-link">Fair Use</a>
+        </div>
+        <div class="copyright">
+            © 2024 VidGrab. All rights reserved.
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <span>Processing started! Check notifications.</span>
+    </div>
+
+    <script>
+        // Paste link
+        async function pasteLink() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('urlInput').value = text;
+                showToast("Link pasted successfully!", "success");
+            } catch (err) {
+                showToast("Clipboard access denied. Please paste manually.", "error");
+            }
+        }
+
+        // Get video info
+        async function fetchInfo() {
+            const url = document.getElementById('urlInput').value.trim();
+            if(!url) {
+                showToast("Please enter a valid URL first!", "error");
+                return;
+            }
+
+            if (!url.includes('.') || url.length < 10) {
+                showToast("Please enter a valid video URL", "error");
+                return;
+            }
+
+            const loader = document.getElementById('loader');
+            const resultArea = document.getElementById('resultArea');
+            const errorMessage = document.getElementById('errorMessage');
+            const btn = document.querySelector('.btn-search');
+            const formatSelect = document.getElementById('formatSelect');
+
+            loader.style.display = 'block';
+            resultArea.style.display = 'none';
+            errorMessage.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = "Searching...";
+            formatSelect.innerHTML = '<option value="" disabled selected>Loading options...</option>';
+
+            try {
+                const res = await fetch('/get-info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url})
+                });
+
+                const data = await res.json();
+
+                if(!res.ok) throw new Error(data.error);
+
+                document.getElementById('thumb').src = data.thumbnail;
+                document.getElementById('videoTitle').innerText = data.title;
+                document.getElementById('duration').innerText = data.duration || 'Unknown';
+                document.getElementById('platform').innerText = data.platform || 'Video';
+                document.getElementById('hiddenUrl').value = url;
+                
+                formatSelect.innerHTML = '';
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "Select Quality and Format";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                formatSelect.appendChild(defaultOption);
+
+                if (data.video_formats && data.video_formats.length > 0) {
+                    let videoGroup = document.createElement('optgroup');
+                    videoGroup.label = '🎥 Video Formats';
+                    
+                    data.video_formats.forEach(f => {
+                        let option = document.createElement('option');
+                        option.value = f.format_id;
+                        let quality = f.resolution || (f.height ? f.height + 'p' : 'Unknown');
+                        let label = `${quality} (${f.ext}) - ${f.filesize}`;
+                        if (f.format_note && f.format_note !== 'N/A') {
+                            label += ` [${f.format_note}]`;
+                        }
+                        option.textContent = label;
+                        videoGroup.appendChild(option);
+                    });
+                    formatSelect.appendChild(videoGroup);
+                }
+
+                let bestVideoOption = document.createElement('option');
+                bestVideoOption.value = "best";
+                bestVideoOption.textContent = "🎯 Best Video Quality (Recommended)";
+                formatSelect.appendChild(bestVideoOption);
+
+                if (data.audio_formats && data.audio_formats.length > 0) {
+                    let audioGroup = document.createElement('optgroup');
+                    audioGroup.label = '🎵 Audio Formats';
+                    
+                    let mp3Option = document.createElement('option');
+                    mp3Option.value = "mp3";
+                    mp3Option.textContent = "MP3 Audio (Best Quality - 192kbps)";
+                    audioGroup.appendChild(mp3Option);
+                    
+                    data.audio_formats.forEach(f => {
+                        let option = document.createElement('option');
+                        option.value = f.format_id;
+                        let label = `Audio (${f.ext}) - ${f.filesize}`;
+                        if (f.format_note) label += ` [${f.format_note}]`;
+                        option.textContent = label;
+                        audioGroup.appendChild(option);
+                    });
+                    formatSelect.appendChild(audioGroup);
+                }
+
+                if (formatSelect.options.length <= 1) {
+                    let option = document.createElement('option');
+                    option.value = "best";
+                    option.textContent = "Best Available Quality";
+                    formatSelect.appendChild(option);
+                }
+
+                resultArea.style.display = 'block';
+                showToast("Video info loaded successfully!", "success");
+                
+                setTimeout(() => {
+                    document.getElementById('downloadForm').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }, 500);
+
+            } catch (err) {
+                const errorMsg = document.getElementById('errorMessage');
+                errorMsg.textContent = "Error: " + err.message;
+                errorMsg.style.display = 'block';
+                showToast("Failed to load video info", "error");
+            } finally {
+                loader.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = "Get Video Info";
+            }
+        }
+
+        // Start download with progress tracking
+        function startDownload() {
+            const formatSelect = document.getElementById('formatSelect');
+            const selectedOption = formatSelect.options[formatSelect.selectedIndex];
+            
+            if (!selectedOption || selectedOption.disabled || selectedOption.value === "") {
+                showToast("Please select a format first!", "error");
+                return false;
+            }
+
+            // Set the format ID for the form
+            document.getElementById('formatId').value = selectedOption.value;
+
+            // Show progress bar
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.style.display = 'block';
+
+            // Start progress tracking
+            startProgressTracking();
+
+            // Submit form
+            document.getElementById('downloadForm').submit();
+            return true;
+        }
+
+        // Progress tracking with Server-Sent Events
+        function startProgressTracking() {
+            const eventSource = new EventSource('/progress');
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                updateProgress(data.progress, data.status);
+                
+                if (data.progress >= 100) {
+                    setTimeout(() => {
+                        eventSource.close();
+                    }, 2000);
+                }
+            };
+            
+            eventSource.onerror = function() {
+                eventSource.close();
+            };
+        }
+
+        // Update progress bar
+        function updateProgress(percent, status) {
+            const progressFill = document.getElementById('progressFill');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressText = document.getElementById('progressText');
+            
+            progressFill.style.width = percent + '%';
+            progressPercent.textContent = percent + '%';
+            progressText.textContent = status;
+            
+            if (percent >= 100) {
+                progressText.textContent = "Download complete! File transfer starting...";
+            }
+        }
+
+        // Toast notifications
+        function showToast(message, type = "success") {
+            const toast = document.getElementById("toast");
+            toast.querySelector('span').innerText = message;
+            
+            toast.className = "toast";
+            if (type === "error") {
+                toast.classList.add("error");
+            }
+            
+            toast.classList.add("show");
+            setTimeout(function(){ 
+                toast.className = toast.className.replace("show", "").replace("error", ""); 
+            }, 3000);
+        }
+
+        // Allow Enter key in input field
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                fetchInfo();
+            }
+        });
+
+        // Enhance UX - show hints
+        document.getElementById('urlInput').addEventListener('focus', function() {
+            this.setAttribute('placeholder', 'Example: https://www.youtube.com/watch?v=...');
+        });
+
+        document.getElementById('urlInput').addEventListener('blur', function() {
+            this.setAttribute('placeholder', 'Paste video link here...');
+        });
+
+        // Auto-check clipboard on page load
+        window.addEventListener('load', async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.includes('youtube.com') || text.includes('youtu.be') || 
+                    text.includes('tiktok.com') || text.includes('instagram.com') ||
+                    text.includes('facebook.com')) {
+                    document.getElementById('urlInput').value = text;
+                    showToast("Video link detected from clipboard!", "success");
+                }
+            } catch (err) {
+                // Ignore errors - user didn't allow clipboard access
+            }
+        });
+
+        // Prevent right-click on form
+        document.getElementById('downloadForm').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    </script>
+
+</body>
+</html>
+
